@@ -1,0 +1,27 @@
+{
+  "name": "vet-transcription-platform",
+  "version": "1.0.0",
+  "description": "Scalable veterinary transcription platform with NestJS, Firebase, Stripe, and AI-powered medical record generation",
+  "author": "Vet Transcription Team",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "workers"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w backend & npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend && npm run build -w workers",
+    "test": "npm run test -w backend && npm run test -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "lerna": "^7.1.0"
+  }
+}
