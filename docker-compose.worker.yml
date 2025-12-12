@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # Redis para fila de jobs
+  redis:
+    image: redis:7-alpine
+    container_name: vet-transcription-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Transcription Worker (1 instância)
+  worker-1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.worker
+    container_name: vet-transcription-worker-1
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_CONCURRENCY=5
+      - ASR_PROVIDER=google-cloud-speech
+      - ASR_LANGUAGE_CODE=pt-BR
+      - ASR_ENABLE_DIARIZATION=false
+      - GOOGLE_CLOUD_CREDENTIALS=${GOOGLE_CLOUD_CREDENTIALS}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+    volumes:
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vet-transcription
+
+  # Transcription Worker (2ª instância - opcional para escalabilidade)
+  worker-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.worker
+    container_name: vet-transcription-worker-2
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_CONCURRENCY=5
+      - ASR_PROVIDER=google-cloud-speech
+      - ASR_LANGUAGE_CODE=pt-BR
+      - ASR_ENABLE_DIARIZATION=false
+      - GOOGLE_CLOUD_CREDENTIALS=${GOOGLE_CLOUD_CREDENTIALS}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+    volumes:
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vet-transcription
+
+  # Transcription Worker (3ª instância - opcional para escalabilidade)
+  worker-3:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.worker
+    container_name: vet-transcription-worker-3
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_CONCURRENCY=5
+      - ASR_PROVIDER=google-cloud-speech
+      - ASR_LANGUAGE_CODE=pt-BR
+      - ASR_ENABLE_DIARIZATION=false
+      - GOOGLE_CLOUD_CREDENTIALS=${GOOGLE_CLOUD_CREDENTIALS}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+    volumes:
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vet-transcription
+
+volumes:
+  redis_data:
+
+networks:
+  vet-transcription:
+    driver: bridge

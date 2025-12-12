@@ -1,0 +1,63 @@
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copiar package files
+COPY package*.json ./
+COPY backend/package*.json ./backend/
+
+# Instalar dependências
+RUN npm ci
+
+# Copiar código fonte
+COPY backend ./backend
+
+# Build TypeScript
+RUN npm run build
+
+# Runtime stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar dumb-init para gerenciar sinais
+RUN apk add --no-cache dumb-init
+
+# Criar diretório de logs
+RUN mkdir -p /app/logs
+
+# Copiar package files
+COPY package*.json ./
+COPY backend/package*.json ./backend/
+
+# Instalar dependências de produção
+RUN npm ci --only=production
+
+# Copiar código compilado
+COPY --from=builder /app/dist ./dist
+
+# Copiar .env.example
+COPY .env.example .env.example
+
+# Usuário não-root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3002/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+# Usar dumb-init para gerenciar processo
+ENTRYPOINT ["dumb-init", "--"]
+
+# Comando para iniciar worker
+CMD ["node", "dist/main.worker.js"]
+
+# Metadados
+LABEL maintainer="Vet Transcription Team"
+LABEL description="Transcription Worker - Processa jobs de transcrição de áudio"
+LABEL version="1.0.0"
